@@ -60,13 +60,19 @@ export interface LinkedEntry extends TitledEntry {
  * The shapes match the backend's section schemas exactly.
  */
 export type Section =
-  | { component: 'Header'; content: { logoText: string; navLinks: LabelledLink[] } }
+  | {
+      component: 'Header';
+      content: { logoText: string; navLinks: LabelledLink[] };
+    }
   | {
       component: 'Hero';
       content: { h1: string; subheadline: string; primaryButton: LabelledLink };
     }
   | { component: 'About'; content: { h2: string; body: string } }
-  | { component: 'PortfolioGalleries'; content: { h2: string; items: LinkedEntry[] } }
+  | {
+      component: 'PortfolioGalleries';
+      content: { h2: string; items: LinkedEntry[] };
+    }
   | { component: 'ServicesCard'; content: { h2: string; cards: LinkedEntry[] } }
   | { component: 'CoreValues'; content: { h2: string; values: TitledEntry[] } }
   | { component: 'USPs'; content: { h2: string; items: TitledEntry[] } }

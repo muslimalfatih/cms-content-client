@@ -10,6 +10,10 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    // baseUrl is deprecated in TS 6 but the shadcn CLI reads it to resolve the
+    // "@" alias; without it, `shadcn add` writes to a literal ./@ directory.
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,

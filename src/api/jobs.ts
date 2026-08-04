@@ -5,9 +5,7 @@ import type {
 } from '@/types/job';
 import { request } from './client';
 
-export function createJob(
-  body: CreateJobRequest,
-): Promise<CreateJobResponse> {
+export function createJob(body: CreateJobRequest): Promise<CreateJobResponse> {
   return request<CreateJobResponse>('/jobs', {
     method: 'POST',
     body: JSON.stringify(body),
