@@ -1,6 +1,6 @@
+import AILoader from '@/components/smoothui/ai-loader';
 import ButtonCopy from '@/components/smoothui/button-copy';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import type { JobStatus } from '@/types/job';
 
 const LABEL: Record<JobStatus, string> = {
@@ -10,62 +10,70 @@ const LABEL: Record<JobStatus, string> = {
   failed: 'Failed',
 };
 
-const VARIANT: Record<JobStatus, 'secondary' | 'default' | 'destructive'> = {
-  pending: 'secondary',
-  processing: 'secondary',
-  completed: 'default',
-  failed: 'destructive',
+/** Colour carries the state; the label is not the only signal. */
+const DOT: Record<JobStatus, string> = {
+  pending: 'bg-[var(--color-smooth-600)]',
+  processing: 'bg-[var(--color-blue)]',
+  completed: 'bg-[var(--color-green)]',
+  failed: 'bg-destructive',
 };
 
 export function JobStatusPanel({
   jobId,
   status,
-  elapsedMs,
 }: {
   jobId: string;
   status: JobStatus;
-  elapsedMs: number;
 }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <Badge variant={VARIANT[status]}>{LABEL[status]}</Badge>
+  const running = status === 'pending' || status === 'processing';
 
-      {/* Elapsed time rather than a progress bar: the duration is unknown, and
-          a bar that fills on a guess is a lie the user can catch. */}
-      <span className="text-muted-foreground font-mono text-xs tabular-nums">
-        {Math.floor(elapsedMs / 1000)}s
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="bg-muted/40 inline-flex items-center gap-2 rounded-full border py-1 pr-3 pl-2.5 text-xs font-medium">
+        <span className="relative flex size-1.5">
+          {/* A halo only while work is in flight — state indication, not decoration. */}
+          {running && (
+            <span
+              className={cn(
+                'absolute inline-flex size-full animate-ping rounded-full opacity-60 motion-reduce:animate-none',
+                DOT[status],
+              )}
+            />
+          )}
+          <span
+            className={cn(
+              'relative inline-flex size-1.5 rounded-full',
+              DOT[status],
+            )}
+          />
+        </span>
+        {LABEL[status]}
       </span>
 
-      <span className="text-muted-foreground/60 text-xs">·</span>
+      {/* Indeterminate with an elapsed counter rather than a progress bar: the
+          duration is unknown, and a bar advancing on a guess is a claim the
+          user can catch being wrong. */}
+      {running && (
+        <AILoader
+          variant="dots"
+          showElapsed
+          className="text-muted-foreground"
+        />
+      )}
 
-      <span className="text-muted-foreground font-mono text-xs">
-        {jobId.slice(0, 8)}
-      </span>
-      {/* loadingDuration 0: the component defaults to a 1s spinner, but a
-          clipboard write is instant and faking latency reads as lag. */}
-      <ButtonCopy
-        loadingDuration={0}
-        onCopy={() => navigator.clipboard.writeText(jobId)}
-        className="text-muted-foreground hover:text-foreground"
-      />
-    </div>
-  );
-}
-
-/**
- * Stands in for the pages being written. It mirrors the real result's shape, so
- * the layout does not jump when content replaces it.
- */
-export function GenerationSkeleton() {
-  return (
-    <div className="mt-6 space-y-3">
-      {[0, 1, 2].map((row) => (
-        <div key={row} className="space-y-2 rounded-lg border p-4">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-3 w-full" />
-        </div>
-      ))}
+      {/* One object rather than an id floating beside a button. */}
+      <div className="bg-muted/40 ml-auto inline-flex items-center gap-1 rounded-md border py-0.5 pr-0.5 pl-2.5">
+        <span className="text-muted-foreground font-mono text-[11px] tracking-tight">
+          {jobId.slice(0, 8)}
+        </span>
+        {/* loadingDuration 0: the component defaults to a 1s spinner, but a
+            clipboard write is instant and faking latency reads as lag. */}
+        <ButtonCopy
+          loadingDuration={0}
+          onCopy={() => navigator.clipboard.writeText(jobId)}
+          className="text-muted-foreground hover:text-foreground size-6 rounded"
+        />
+      </div>
     </div>
   );
 }

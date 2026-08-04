@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { getJob } from '@/api/jobs';
 import { isSettled, type JobResult, type JobStatus } from '@/types/job';
@@ -30,13 +30,10 @@ const MAX_CONSECUTIVE_FAILURES = 4;
  */
 export function useJobPolling(jobId: string | null) {
   const [state, setState] = useState<JobPollState>({ kind: 'idle' });
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const startedAt = useRef(0);
 
   useEffect(() => {
     if (!jobId) {
       setState({ kind: 'idle' });
-      setElapsedMs(0);
       return;
     }
 
@@ -45,9 +42,7 @@ export function useJobPolling(jobId: string | null) {
     let attempt = 0;
     let failures = 0;
 
-    startedAt.current = Date.now();
     setState({ kind: 'waiting', status: 'pending' });
-    setElapsedMs(0);
 
     async function tick() {
       attempt += 1;
@@ -57,8 +52,6 @@ export function useJobPolling(jobId: string | null) {
         if (cancelled) return;
 
         failures = 0;
-        setElapsedMs(Date.now() - startedAt.current);
-
         if (isSettled(result.status)) {
           setState(
             result.status === 'completed'
@@ -99,5 +92,5 @@ export function useJobPolling(jobId: string | null) {
     };
   }, [jobId]);
 
-  return { state, elapsedMs };
+  return { state };
 }

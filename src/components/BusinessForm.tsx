@@ -1,14 +1,20 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { ApiError } from '@/api/client';
 import { createJob } from '@/api/jobs';
-import { TagInput } from '@/components/TagInput';
+import Form, {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormLabel,
+  FormMessage,
+} from '@/components/smoothui/form';
 import SmoothButton from '@/components/smoothui/smooth-button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   EMPTY_FORM,
-  MAX_ITEMS,
+  pageCount,
+  parseList,
   toRequest,
   validate,
   type FieldErrors,
@@ -27,7 +33,7 @@ function Section({
 }: {
   index: string;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="grid gap-5 sm:grid-cols-[auto_1fr] sm:gap-8">
@@ -42,6 +48,47 @@ function Section({
   );
 }
 
+/** A comma-separated list. The parsed count confirms what was understood. */
+function ListField({
+  name,
+  label,
+  placeholder,
+  hint,
+  value,
+  onChange,
+}: {
+  name: string;
+  label: string;
+  placeholder: string;
+  hint: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const count = parseList(value).length;
+
+  return (
+    <FormField name={name}>
+      <div className="flex items-baseline justify-between gap-3">
+        <FormLabel>{label}</FormLabel>
+        {count > 0 && (
+          <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
+            {count}
+          </span>
+        )}
+      </div>
+      <FormControl>
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      </FormControl>
+      <FormDescription className="text-xs">{hint}</FormDescription>
+      <FormMessage />
+    </FormField>
+  );
+}
+
 export function BusinessForm({ onSubmitted }: BusinessFormProps) {
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -50,8 +97,7 @@ export function BusinessForm({ onSubmitted }: BusinessFormProps) {
 
   function set<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
-    // Clear the error the moment the field is touched; leaving it up while the
-    // user fixes it is nagging.
+    // Clear the error as soon as the field is touched rather than nagging.
     setErrors((current) => ({ ...current, [key]: undefined }));
   }
 
@@ -60,13 +106,7 @@ export function BusinessForm({ onSubmitted }: BusinessFormProps) {
 
     const found = validate(values);
     setErrors(found);
-    if (Object.values(found).some(Boolean)) {
-      // Send focus to the first problem rather than making the user hunt.
-      document
-        .querySelector<HTMLElement>('[aria-invalid="true"]')
-        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      return;
-    }
+    if (Object.values(found).some(Boolean)) return;
 
     setSubmitting(true);
     setSubmitError([]);
@@ -84,101 +124,87 @@ export function BusinessForm({ onSubmitted }: BusinessFormProps) {
     }
   }
 
+  const pages = pageCount(values);
+
   return (
-    <form onSubmit={onSubmit} className="space-y-10" noValidate>
+    <Form onSubmit={onSubmit} errors={errors} className="space-y-10" noValidate>
       <Section index="01" title="Business">
         <div className="grid gap-5 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={values.name}
-              onChange={(e) => set('name', e.target.value)}
-              placeholder="BuildCo"
-              aria-invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? 'name-error' : undefined}
-            />
-            {errors.name && (
-              <p id="name-error" className="text-destructive text-xs">
-                {errors.name}
-              </p>
-            )}
-          </div>
+          <FormField name="name">
+            <FormLabel>Name</FormLabel>
+            <FormControl>
+              <Input
+                value={values.name}
+                onChange={(e) => set('name', e.target.value)}
+                placeholder="BuildCo"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={values.location}
-              onChange={(e) => set('location', e.target.value)}
-              placeholder="Austin, TX"
-              aria-invalid={Boolean(errors.location)}
-              aria-describedby={errors.location ? 'location-error' : undefined}
-            />
-            {errors.location && (
-              <p id="location-error" className="text-destructive text-xs">
-                {errors.location}
-              </p>
-            )}
-          </div>
+          <FormField name="location">
+            <FormLabel>Location</FormLabel>
+            <FormControl>
+              <Input
+                value={values.location}
+                onChange={(e) => set('location', e.target.value)}
+                placeholder="Austin, TX"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormField>
         </div>
       </Section>
 
       <Section index="02" title="Reach">
-        <TagInput
+        <ListField
+          name="services"
           label="Services"
-          hint="One page per service. Press Enter to add."
-          placeholder="Kitchen Remodeling"
-          values={values.services}
+          placeholder="Kitchen Remodeling, Bathroom Remodeling"
+          hint="Comma separated. One page per service."
+          value={values.services}
           onChange={(v) => set('services', v)}
-          max={MAX_ITEMS}
-          error={errors.services}
         />
-        <TagInput
+        <ListField
+          name="serviceAreas"
           label="Service areas"
-          hint="One page per area."
-          placeholder="Austin TX"
-          values={values.serviceAreas}
+          placeholder="Austin TX, Round Rock TX"
+          hint="Comma separated. One page per area."
+          value={values.serviceAreas}
           onChange={(v) => set('serviceAreas', v)}
-          max={MAX_ITEMS}
-          error={errors.serviceAreas}
         />
       </Section>
 
       <Section index="03" title="Proof">
-        <TagInput
+        <ListField
+          name="projects"
           label="Projects"
-          hint="One portfolio page per project."
           placeholder="Lakeway Kitchen Rebuild"
-          values={values.projects}
+          hint="Comma separated. One portfolio page per project."
+          value={values.projects}
           onChange={(v) => set('projects', v)}
-          max={MAX_ITEMS}
-          error={errors.projects}
         />
-        <TagInput
+        <ListField
+          name="usps"
           label="Selling points"
-          optional
-          placeholder="5-year warranty"
-          values={values.usps}
+          placeholder="5-year warranty, Licensed and insured"
+          hint="Comma separated. Optional."
+          value={values.usps}
           onChange={(v) => set('usps', v)}
-          max={MAX_ITEMS}
-          error={errors.usps}
         />
-        <div className="space-y-2">
-          <Label htmlFor="notes">
-            Notes
-            <span className="text-muted-foreground ml-1.5 font-normal">
-              optional
-            </span>
-          </Label>
-          <Textarea
-            id="notes"
-            rows={3}
-            value={values.notes}
-            onChange={(e) => set('notes', e.target.value)}
-            placeholder="Tone, positioning, anything the copy should know."
-          />
-        </div>
+
+        <FormField name="notes">
+          <FormLabel>Notes</FormLabel>
+          <FormControl>
+            <Textarea
+              rows={3}
+              value={values.notes}
+              onChange={(e) => set('notes', e.target.value)}
+              placeholder="Tone, positioning, anything the copy should know."
+            />
+          </FormControl>
+          <FormDescription className="text-xs">Optional.</FormDescription>
+        </FormField>
       </Section>
 
       {submitError.length > 0 && (
@@ -198,25 +224,22 @@ export function BusinessForm({ onSubmitted }: BusinessFormProps) {
       )}
 
       <div className="flex items-center gap-4 border-t pt-6">
-        <SmoothButton type="submit" loading={submitting} size="lg">
+        {/* `solid` consumes the --btn tokens the `color` axis sets. The legacy
+            `default` variant ignores them and renders as bg-primary, which
+            theme-blue defines as near-white. */}
+        <SmoothButton
+          type="submit"
+          loading={submitting}
+          size="lg"
+          variant="solid"
+          color="accent"
+        >
           {submitting ? 'Starting' : 'Generate website'}
         </SmoothButton>
         <p className="text-muted-foreground text-xs">
-          {plural(
-            values.services.length +
-              values.serviceAreas.length +
-              values.projects.length +
-              5,
-          )}
+          {pages > 5 ? `${pages} pages` : 'Add services to see the page count'}
         </p>
       </div>
-    </form>
+    </Form>
   );
-}
-
-/** The page count is derivable, so showing it sets expectations before submit. */
-function plural(count: number) {
-  return count === 5
-    ? 'Add entries above to see the page count'
-    : `${count} pages`;
 }
