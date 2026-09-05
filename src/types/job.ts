@@ -100,6 +100,21 @@ export interface WebsiteDocument {
   pages: Page[];
 }
 
+/**
+ * Where a running job has got to. Comes from the queue rather than the database,
+ * so it is present only while the job is `processing` and only once the first
+ * page starts.
+ */
+export interface JobProgress {
+  stage: 'writing' | 'cooldown';
+  /** The route being written, or the one whose request is being retried. */
+  route: string;
+  pagesDone: number;
+  pagesTotal: number;
+  /** Only on `cooldown`: how long the provider asked the worker to wait. */
+  waitMs?: number;
+}
+
 /** Response body of `GET /jobs/:id`. */
 export interface JobResult {
   businessId: string;
@@ -110,6 +125,8 @@ export interface JobResult {
   warnings?: string[];
   /** Present only when `status` is `failed`. */
   errorMessage?: string;
+  /** Present only while `status` is `processing`. */
+  progress?: JobProgress;
 }
 
 /** Request body of `POST /jobs`. */

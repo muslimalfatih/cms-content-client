@@ -105,20 +105,32 @@ export default function App() {
                       ? 'completed'
                       : 'failed'
                 }
+                progress={state.kind === 'waiting' ? state.progress : undefined}
               />
 
               {state.kind === 'waiting' && (
                 <div className="flex flex-col items-center gap-4 rounded-lg border py-16">
                   <AILoader variant="grid" />
-                  <p className="text-muted-foreground text-sm">
-                    Writing copy, one page at a time
+                  {/* Says which of the two long waits this is. A rate limit and
+                      a slow model look identical from here otherwise, and only
+                      one of them means anything is wrong. */}
+                  <p className="text-muted-foreground max-w-xs text-center text-sm text-balance">
+                    {state.progress?.stage === 'cooldown'
+                      ? 'The model provider is rate limiting us. Waiting for the window to clear, then picking up where we left off.'
+                      : 'Writing copy, one page at a time'}
                   </p>
                 </div>
               )}
 
               {state.kind === 'failed' && (
                 <ErrorState
-                  title="Generation failed"
+                  title={
+                    /^generation budget of/.test(
+                      state.result.errorMessage ?? '',
+                    ) || /rate limit/i.test(state.result.errorMessage ?? '')
+                      ? 'Stopped after the provider rate limit held too long'
+                      : 'Generation failed'
+                  }
                   detail={state.result.errorMessage}
                   onRetry={retry}
                   retrying={retrying}

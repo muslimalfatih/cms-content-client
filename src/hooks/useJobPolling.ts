@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { getJob } from '@/api/jobs';
-import { isSettled, type JobResult, type JobStatus } from '@/types/job';
+import {
+  isSettled,
+  type JobProgress,
+  type JobResult,
+  type JobStatus,
+} from '@/types/job';
 
 export type JobPollState =
   | { kind: 'idle' }
-  | { kind: 'waiting'; status: JobStatus }
+  | { kind: 'waiting'; status: JobStatus; progress?: JobProgress }
   | { kind: 'completed'; result: JobResult }
   | { kind: 'failed'; result: JobResult }
   /** Polling itself broke — distinct from the job failing. */
@@ -61,7 +66,11 @@ export function useJobPolling(jobId: string | null) {
           return;
         }
 
-        setState({ kind: 'waiting', status: result.status });
+        setState({
+          kind: 'waiting',
+          status: result.status,
+          progress: result.progress,
+        });
       } catch (error) {
         if (cancelled) return;
 
